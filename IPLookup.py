@@ -1,51 +1,53 @@
-from json import loads
-from urllib.request import urlopen
-from prettytable import PrettyTable
+import requests
+from tabulate import tabulate
 
 class IPLocator:
     def __init__(self, ipAddress):
         self.ipAddress = ipAddress
     
-    def getLocation(self):
-        # request a json file using Freegeoip API
-        request = urlopen("https://freegeoip.net/json/"+str(self.ipAddress)).read().decode("utf-8")
-        jsonFile = loads(request)
+    def get_location(self):
+        try:
+            url = f"https://freegeoip.app/json/{self.ipAddress}"
+            response = requests.get(url)
+            response.raise_for_status()  # Check for any request errors
+            jsonFile = response.json()
 
-        region = jsonFile['region_name']
-        countryCode = jsonFile['country_code']
-        latitude = jsonFile['latitude']
-        longitude = jsonFile['longitude']
-        ipAddr = jsonFile['ip']
-        zipCode = jsonFile['zip_code']
-        timeZone = jsonFile['time_zone']
-        countryName = jsonFile['country_name']
-        city = jsonFile['city']
+            table_data = {
+                "Region": jsonFile['region_name'],
+                "Country Code": jsonFile['country_code'],
+                "Latitude": jsonFile['latitude'],
+                "Longitude": jsonFile['longitude'],
+                "IP": jsonFile['ip'],
+                "ZIP Code": jsonFile['zip_code'],
+                "Time Zone": jsonFile['time_zone'],
+                "Country Name": jsonFile['country_name'],
+                "City": jsonFile['city']
+            }
 
-        table = PrettyTable()
-        table.field_names = [
-            "Region", "Country Code", "Latitude",
-            "Longitude", "IP", "ZIP Code", "Time Zone",
-            "Country Name", "City"
-            ]
-        table.add_row(
-            [
-                region, countryCode, latitude, longitude,
-                ipAddr, zipCode, timeZone, countryName, city
-                ]
-            )
-        table.align = "r"
-        print(table)
+            table = tabulate([table_data], headers="keys", tablefmt="grid")
+            print(table)
+
+        except requests.exceptions.RequestException as e:
+            print("Error: Unable to fetch data. Please check your internet connection.")
+        except requests.exceptions.HTTPError as e:
+            print("HTTP Error:", e)
+        except requests.exceptions.JSONDecodeError as e:
+            print("Error: Invalid JSON response from the server.")
+        except KeyError as e:
+            print("Error: Missing key in JSON response.")
+        except Exception as e:
+            print("Error:", e)
 
 def main():
-    ipAddr = input("Enter IP Address:   ")
+    ipAddr = input("Enter IP Address: ")
     try:
         ipLookup = IPLocator(ipAddr)
-        ipLookup.getLocation()
+        ipLookup.get_location()
     except Exception as e:
-        print("Error:   ", str(e))
+        print("Error:", str(e))
     finally:
         print("""
-        -->\tProgrammer:  Given Lepita
+        -->\tProgrammer: Given Lepita
         -->\tProject: Simple IP Lookup
         -->\tDate: November 2017
         -->\tDescription: Finds several information given an IP.
